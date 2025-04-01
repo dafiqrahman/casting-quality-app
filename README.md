@@ -6,7 +6,7 @@ Aplikasi ini menggunakan model **CNN** untuk klasifikasi dan **YOLOv5** untuk de
 
 ### 1. Clone Repository
 ```sh
-git clone https://github.com/username/repository-name.git
+git clone https://github.com/dafiqrahman/casting-quality-app.git
 cd repository-name
 ```
 
