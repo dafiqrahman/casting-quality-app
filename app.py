@@ -9,20 +9,21 @@ print(tf.__version__)
 # Load CNN Model (Klasifikasi)
 
 
-@st.cache_resource
-def load_cnn_model():
-    return tf.keras.models.load_model("cnn_residuals (2).h5")
+# @st.cache_resource
+# def load_cnn_model():
+#     return tf.keras.models.load_model("cnn_residuals (2).h5")
 
-# Load YOLOv5 Model (Deteksi)
-
-
-@st.cache_resource
-def load_yolo_model():
-    return torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', force_reload=True)
+# # Load YOLOv5 Model (Deteksi)
 
 
-cnn_model = load_cnn_model()
-yolo_model = load_yolo_model()
+# @st.cache_resource
+# def load_yolo_model():
+#     return torch.hub.load('ultralytics/yolov5', 'custom', path='best.pt', force_reload=True)
+
+
+cnn_model = tf.keras.models.load_model("cnn_residuals (2).h5")
+yolo_model = torch.hub.load(
+    'ultralytics/yolov5', 'custom', path='best.pt', force_reload=True)
 
 # Create tabs for navigation
 tab1, tab2 = st.tabs(
