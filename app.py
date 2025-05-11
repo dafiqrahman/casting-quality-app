@@ -5,7 +5,6 @@ import numpy as np
 from PIL import Image
 import cv2
 import keras
-print("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
 print(tf.__version__)
 # Load CNN Model (Klasifikasi)
 
@@ -26,8 +25,8 @@ cnn_model = load_cnn_model()
 yolo_model = load_yolo_model()
 
 # Create tabs for navigation
-tab1, tab2, tab3 = st.tabs(
-    ["Beranda", "Klasifikasi Cacat Logam", "Deteksi Cacat Logam"])
+tab1, tab2 = st.tabs(
+    ["Beranda", "Klasifikasi dan deteksi Cacat Logam"])
 
 with tab1:
     # add the title centered "Judul Aplikasi"
@@ -51,77 +50,93 @@ with tab1:
         unsafe_allow_html=True)
 
 with tab2:
-    st.write("## Klasifikasi Cacat Logam")
+    st.write("## Klasifikasi dan Deteksi Cacat Logam")
     st.write("Gunakan menu ini untuk melakukan klasifikasi guna mengetahui apakah terdapat kecacatan pada logam.")
 
-    # Create two columns
-    col1, col2 = st.columns([1, 2])
-
-    with col1:
-        st.write("### Input Gambar")
-        uploaded_file = st.file_uploader(
-            "Unggah Gambar", type=["jpg", "png", "jpeg"],
-            label_visibility="collapsed", key="klasifikasi_uploader")
-
-        if uploaded_file is not None:
-            image = Image.open(uploaded_file).convert("RGB")
-            st.image(image, caption="Preview Gambar", use_container_width=True)
-            # Prediction button
-            if st.button("Tombol Prediksi", key="klasifikasi_button"):
-                st.success("Prediksi selesi!")
-
-    with col2:
-        if uploaded_file is not None:
-            st.write("### Hasil Prediksi:")
-
-            img = tf.keras.utils.img_to_array(image)
-            # Resize to match model input shape
-            img = tf.image.resize(img, (224, 224))
-            print(np.mean(img[0]))
-            img_array = tf.expand_dims(img, axis=0)
-            prediction = cnn_model.predict(img_array)
-            # Adjust according to your dataset
-            class_names = ["Cacat", "Tidak Cacat"]
-            predicted_class = class_names[int(np.round(prediction[0][0]))]
-            confidence = (1-prediction[0][0]) * \
-                100  # Convert to percentage
-            # Display predicted class
-            st.write(f"**Hasil Prediksi:** {predicted_class}")
-            columns1, columns2 = st.columns(2)
-            with columns1:
-                # Display prediction results
-                st.metric(label="Persentase Logam Cacat",
-                          value=f"{confidence:.2f}%")
-            with columns2:
-                st.metric(label="Persentase Logam Tidak Cacat",
-                          value=f"{100-confidence:.2f}%")
-
-
-with tab3:
-    st.write("## Deteksi Cacat Logam dengan YOLOv5")
-    st.write(
-        "Gunakan menu ini untuk mendeteksi bagian logam yang mengalami kecacatan.")
-
     uploaded_file = st.file_uploader(
-        "Unggah Gambar", type=["jpg", "png", "jpeg"],
-        key="deteksi_uploader")
+        "Input Gambar", type=["jpg", "png", "jpeg"],
+        label_visibility="visible", key="klasifikasi_uploader")
 
     if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        col_yolo, col_yolo2 = st.columns(2)
-        with col_yolo:
-            st.write("### Gambar Asli")
-            st.image(image, caption="Gambar Asli",
-                     use_container_width=True)
-            if st.button("Deteksi Cacat", key="deteksi_button"):
-                with col_yolo2:
+        image = Image.open(uploaded_file).convert("RGB")
 
-                    image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+        col_preview, col_result = st.columns([1, 1])
+        predicted_class = None
 
-                    # Perform YOLOv5 inference
-                    results = yolo_model(image_cv, size=320)
+        with col_preview:
+            st.write("### Preview Gambar")
+            st.image(image, use_container_width=True)
+            # Tombol prediksi di bawah gambar
+            if st.button("Tombol Prediksi", key="klasifikasi_button"):
+                # Proses prediksi
+                img = tf.keras.utils.img_to_array(image)
+                img = tf.image.resize(img, (224, 224))
+                img_array = tf.expand_dims(img, axis=0)
+                prediction = cnn_model.predict(img_array)
+                class_names = ["Cacat", "Tidak Cacat"]
+                predicted_class = class_names[int(np.round(prediction[0][0]))]
+                confidence = (1 - prediction[0][0]) * 100
 
-                    st.write("### Gambar Hasil Deteksi")
-                    st.image(results.render()[0],
-                             caption="Hasil Deteksi dengan Bounding Box",
-                             use_container_width=True)
+                # Menampilkan hasil prediksi di sisi kanan
+                with col_result:
+                    st.write("### Hasil Prediksi:")
+                    st.write(f"**Status:** {predicted_class}")
+                    col_cacat, col_tidak = st.columns(2)
+                    with col_cacat:
+                        st.metric("Persentase Logam Cacat",
+                                  f"{confidence:.2f}%")
+                    with col_tidak:
+                        st.metric("Persentase Logam Tidak Cacat",
+                                  f"{100-confidence:.2f}%")
+
+                # Jika logam cacat, lanjut ke deteksi
+        if predicted_class == "Cacat":
+            st.write("---")
+            st.write("## Deteksi Cacat Logam")
+
+            col_deteksi1, col_deteksi2 = st.columns(2)
+            with col_deteksi1:
+                st.write("### Preview Gambar")
+                st.image(image, use_container_width=True,
+                         caption="Gambar Asli")
+
+            with col_deteksi2:
+                st.write("### Gambar Hasil Deteksi")
+                image_cv = cv2.cvtColor(
+                    np.array(image), cv2.COLOR_RGB2BGR)
+                results = yolo_model(image_cv, size=320)
+                st.image(results.render()[0],
+                         caption="Deteksi Bounding Box",
+                         use_container_width=True)
+        else:
+            st.success("Logam tidak mengalami cacat.")
+
+
+# with tab3:
+#     st.write("## Deteksi Cacat Logam dengan YOLOv5")
+#     st.write(
+#         "Gunakan menu ini untuk mendeteksi bagian logam yang mengalami kecacatan.")
+
+#     uploaded_file = st.file_uploader(
+#         "Unggah Gambar", type=["jpg", "png", "jpeg"],
+#         key="deteksi_uploader")
+
+#     if uploaded_file is not None:
+#         image = Image.open(uploaded_file)
+#         col_yolo, col_yolo2 = st.columns(2)
+#         with col_yolo:
+#             st.write("### Gambar Asli")
+#             st.image(image, caption="Gambar Asli",
+#                      use_container_width=True)
+#             if st.button("Deteksi Cacat", key="deteksi_button"):
+#                 with col_yolo2:
+
+#                     image_cv = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+#                     # Perform YOLOv5 inference
+#                     results = yolo_model(image_cv, size=320)
+
+#                     st.write("### Gambar Hasil Deteksi")
+#                     st.image(results.render()[0],
+#                              caption="Hasil Deteksi dengan Bounding Box",
+#                              use_container_width=True)
